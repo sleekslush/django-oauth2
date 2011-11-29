@@ -15,11 +15,9 @@ class ClientApplication(models.Model):
 class Authorization(models.Model):
     client = models.ForeignKey(ClientApplication)
     user = models.ForeignKey(User)
-    code = models.CharField(max_length=40, unique=True)
-    redirection_uri = models.URLField()
-    issued_at = models.DateTimeField(auto_now_add=True, db_index=True)
     scope = models.CharField(max_length=255)
     state = models.CharField(max_length=255)
+    redirection_uri = models.URLField()
 
     class Meta:
         unique_together = ('client', 'user')
@@ -28,10 +26,8 @@ class Authorization(models.Model):
         return self.code
 
 class Token(models.Model):
-    client = models.ForeignKey(ClientApplication)
-    user = models.ForeignKey(User)
+    authorization = models.ForeignKey(Authorization, unique=True)
     token = models.CharField(max_length=40, unique=True)
-    scope = models.CharField(max_length=255)
 
     class Meta:
         abstract = True
@@ -39,11 +35,12 @@ class Token(models.Model):
     def __unicode__(self):
         return self.token
 
+class AuthorizationToken(Token):
+    expires_at = models.DateTimeField(db_index=True)
+
 class AccessToken(Token):
     token_type = models.CharField(max_length=20, db_index=True)
     expires_at = models.DateTimeField(db_index=True)
-    state = models.CharField(max_length=255)
 
 class RefreshToken(Token):
-    class Meta(Token.Meta):
-        unique_together = ('client', 'user')
+    pass
