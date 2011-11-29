@@ -19,6 +19,7 @@ class Authorization(models.Model):
     redirection_uri = models.URLField()
     issued_at = models.DateTimeField(auto_now_add=True, db_index=True)
     scope = models.CharField(max_length=255)
+    state = models.CharField(max_length=255)
 
     class Meta:
         unique_together = ('client', 'user')
@@ -39,8 +40,9 @@ class Token(models.Model):
         return self.token
 
 class AccessToken(Token):
+    token_type = models.CharField(max_length=20, db_index=True)
     expires_at = models.DateTimeField(db_index=True)
-    token_type = models.CharField(max_length=20)
+    state = models.CharField(max_length=255)
 
 class RefreshToken(Token):
     class Meta(Token.Meta):
