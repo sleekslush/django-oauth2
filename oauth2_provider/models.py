@@ -1,3 +1,4 @@
+import uuid
 from django.contrib.auth.models import User
 from django.db import models
 from oauth2_provider.managers import AccessTokenManager, AuthorizationTokenManager
@@ -31,6 +32,15 @@ class Token(models.Model):
     class Meta:
         abstract = True
 
+    def regenerate(self):
+        self.token = uuid.uuid4().hex
+
+    def save(self, *args, **kwargs):
+        if not self.id:
+            self.regenerate()
+
+        super(Token, self).save(*args, **kwargs)
+
     def __unicode__(self):
         return self.token
 
@@ -42,7 +52,7 @@ class ExpirableToken(Token):
 
 class AuthorizationToken(ExpirableToken):
     state = models.CharField(max_length=255)
-    redirection_uri = models.URLField()
+    redirect_uri = models.URLField()
 
     objects = AuthorizationTokenManager()
 
