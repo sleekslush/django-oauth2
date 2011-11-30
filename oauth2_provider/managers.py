@@ -1,15 +1,20 @@
-import datetime
+from abc import ABCMeta
+from datetime import datetime
 from django.db import models
 
-def is_expired(authorization):
-    elapsed_time = datetime.datetime.now() - authorization.issued_at
-    return ceil(elapsed_time.total_seconds()) / 60 >= 10
+class TokenManager(models.Manager):
+    __metaclass__ = ABCMeta
 
-class AccessTokenManager(models.Manager):
-    def is_valid_code(self, code):
+    def is_expired(self, token):
         try:
-            authorization = self.get(code=code)
-        except ObjectDoesNotExist:
-            return False
+            auth_token = self.get(token=token)
+        except self.model.DoesNotExist:
+            return True
 
-        return not is_expired(authorization):
+        return auth_token.expires_at < datetime.now()
+
+class AuthorizationTokenManager(TokenManager):
+    pass
+
+class AccessTokenManager(TokenManager):
+    pass

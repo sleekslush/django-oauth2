@@ -1,5 +1,6 @@
 from django.contrib.auth.models import User
 from django.db import models
+from oauth2_provider.managers import AccessTokenManager, AuthorizationTokenManager
 
 class ClientApplication(models.Model):
     client_id = models.CharField(max_length=40, unique=True)
@@ -43,8 +44,12 @@ class AuthorizationToken(ExpirableToken):
     state = models.CharField(max_length=255)
     redirection_uri = models.URLField()
 
+    objects = AuthorizationTokenManager()
+
 class AccessToken(ExpirableToken):
     token_type = models.CharField(max_length=20, db_index=True)
+
+    objects = AccessTokenManager()
 
 class RefreshToken(Token):
     pass
