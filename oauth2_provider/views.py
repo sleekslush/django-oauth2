@@ -1,11 +1,10 @@
 import urllib
-import urllib2
 from django.http import HttpResponse
 from django.views.generic import RedirectView
 from dzen.django.apps.common.views import ProtectedViewMixin
 from oauth2_provider.exceptions import *
-from oauth2_provider.models import Client
-from urlparse import urlparse, urlunparse
+from oauth2_provider.models import ClientApplication
+from urlparse import parse_qs, urlparse, urlunparse
 
 class OAuth2RedirectView(RedirectView):
     permanent = False
@@ -23,7 +22,7 @@ class OAuth2RedirectView(RedirectView):
         if self.fragment:
             split_url[5] = urllib.urlencode(self.query_params)
         else:
-            query_params = urllib2.parse_qs(parse_result.query)
+            query_params = parse_qs(parse_result.query)
             query_params.update(self.query_params)
             split_url[4] = urllib.urlencode(query_params)
 
@@ -51,13 +50,13 @@ class AuthorizeView(ProtectedViewMixin, OAuth2RedirectView):
         try:
             client = self._get_client(request)
             redirect_uri = self._get_redirect_uri(request, client)
-        except (InvalidClientError, InvalidRedirectError), ex:
+        except (InvalidClientError, InvalidRequestError), ex:
             return HttpResponse(ex.message)
 
         try:
             response_type = self._get_response_type(request)
-            scope = request.GET.get('scope', None)
-            state = request.GET.get('state', None)
+            scope = request.GET.get('scope', '')
+            state = request.GET.get('state', '')
         except OAuth2Error, ex:
             self.query_params = self._get_error_query_params(ex)
         except Exception, ex:
@@ -78,8 +77,8 @@ class AuthorizeView(ProtectedViewMixin, OAuth2RedirectView):
             raise InvalidRequestError('Missing client_id')
 
         try:
-            return Client.objects.get(client_id=client_id)
-        except Client.DoesNotExist:
+            return ClientApplication.objects.get(client_id=client_id)
+        except ClientApplication.DoesNotExist:
             raise InvalidClientError('Client does not exist: {}'.format(client_id))
 
     def _get_redirect_uri(self, request, client):
@@ -89,7 +88,7 @@ class AuthorizeView(ProtectedViewMixin, OAuth2RedirectView):
             return client.callback_url
 
         if not redirect_uri.startswith(client.callback_url):
-            raise InvalidRedirectUriError('Invalid redirect_uri: {}'.format(redirect_uri))
+            raise InvalidRequestError('Invalid redirect_uri: {}'.format(redirect_uri))
 
         return redirect_uri
 
@@ -103,26 +102,31 @@ class AuthorizeView(ProtectedViewMixin, OAuth2RedirectView):
 
         return response_type
 
-   def _generate_authorization_token(self, client, user, redirect_uri, scope, state):
-       authorization = self._get_authorization(client, user, scope)
-       return self._get_token(authorization, redirect_uri, state)
+    def _generate_authorization_token(self, client, user, redirect_uri, scope, state):
+        authorization = self._get_authorization(client, user, scope)
+        return self._get_token(authorization, redirect_uri, state)
 
-   def _get_authorization(self, client, user, scope):
-       authorization, created = client.authorization_set.get_or_create(user=user, scope=scope)
+    def _get_authorization(self, client, user, scope):
+        authorization, created = client.authorization_set.get_or_create(user=user, scope=scope)
 
-       if not created:
-           # TODO check if scope is ok here
-           authorization.scope = scope
-           authorization.save()
+        if not created:
+            # TODO check if scope is ok here
+            authorization.scope = scope
+            authorization.save()
 
-       return authorization
+        return authorization
 
-   def _get_token(self, authorization, redirect_uri, state):
-       token, created = authorization.authorizationtoken_set.get_or_create(
+    def _get_token(self, authorization, redirect_uri, state):
+        token, created = authorization.authorizationtoken_set.get_or_create(
                redirect_uri=redirect_uri, state=state)
 
-       if not created:
+        if not created:
            token.regenerate()
            token.save()
 
-       return token
+        response = {'code': token.token}
+
+        if state:
+            response['state'] = state
+
+        return response
