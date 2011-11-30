@@ -1,4 +1,5 @@
 import urllib
+import urllib2
 from django.http import HttpResponse
 from django.views.generic import RedirectView
 from dzen.django.apps.common.views import ProtectedViewMixin
@@ -13,7 +14,7 @@ class OAuth2RedirectView(RedirectView):
 
     def get_redirect_url(self, **kwargs):
         # Deserialize the URL
-        parse_result = urlparse.urlparse(self.url)
+        parse_result = urlparse(self.url)
 
         # Allow it to be mutable
         split_url = list(parse_result)
@@ -27,7 +28,7 @@ class OAuth2RedirectView(RedirectView):
             split_url[4] = urllib.urlencode(query_params)
 
         # Serialize the URL
-        url = urlparse.urlunparse(split_url)
+        url = urlunparse(split_url)
 
         return url % kwargs
 
