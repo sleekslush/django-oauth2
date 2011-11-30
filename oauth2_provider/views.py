@@ -98,7 +98,7 @@ class AuthorizeView(ProtectedViewMixin, OAuth2RedirectView):
         if response_type not in ('code', 'token'):
             raise UnsupportedResponseType()
 
-        self.fragment = response_type is 'token'
+        self.fragment = (response_type == 'token')
 
         return response_type
 
