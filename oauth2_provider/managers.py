@@ -1,10 +1,7 @@
-from abc import ABCMeta
 from datetime import datetime
 from django.db import models
 
 class TokenManager(models.Manager):
-    __metaclass__ = ABCMeta
-
     def is_expired(self, token):
         try:
             auth_token = self.get(token=token)
