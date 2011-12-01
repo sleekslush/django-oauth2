@@ -7,9 +7,6 @@ class OAuth2Error(Exception):
         self.error_uri = error_uri
         self.state = state
 
-class InvalidRedirectUriError(OAuth2Error):
-    pass
-
 class InvalidRequestError(OAuth2Error):
     error = 'invalid_request'
 
