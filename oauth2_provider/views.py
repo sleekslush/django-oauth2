@@ -54,17 +54,17 @@ class AuthorizeView(ProtectedViewMixin, OAuth2RedirectView):
             return HttpResponse(ex.message)
 
         try:
+            state = self._get_state(request)
             response_type = self._get_response_type(request)
             scope = request.GET.get('scope', '')
-            state = request.GET.get('state', '')
         except OAuth2Error, ex:
-            self.query_params = self._get_error_query_params(ex)
+            self.query_params.update(self._get_error_query_params(ex))
         except Exception, ex:
             # TODO log the error
-            self.query_params = self._get_error_query_params(ServerError())
+            self.query_params.update(self._get_error_query_params(ServerError()))
         else:
-            self.query_params = self._generate_authorization_token(
-                    client, request.user, redirect_uri, scope, state)
+            self.query_params.update(self._generate_authorization_token(
+                    client, request.user, redirect_uri, scope, state))
 
         self.url = redirect_uri
 
@@ -91,6 +91,14 @@ class AuthorizeView(ProtectedViewMixin, OAuth2RedirectView):
             raise InvalidRequestError('Invalid redirect_uri: {}'.format(redirect_uri))
 
         return redirect_uri
+
+    def _get_state(self, request):
+        state = request.GET.get('state', '')
+
+        if state:
+            self.query_params['state'] = state
+
+        return state
 
     def _get_response_type(self, request):
         response_type = request.GET.get('response_type', 'code')
@@ -126,9 +134,4 @@ class AuthorizeView(ProtectedViewMixin, OAuth2RedirectView):
         token.state = state
         token.save()
 
-        response = {'code': token.token}
-
-        if state:
-            response['state'] = state
-
-        return response
+        return {'code': token.token}
