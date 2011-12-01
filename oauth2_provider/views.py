@@ -8,8 +8,11 @@ from urlparse import parse_qs, urlparse, urlunparse
 
 class OAuth2RedirectView(RedirectView):
     permanent = False
-    fragment = False
-    query_params = {}
+
+    def dispatch(self, request, *args, **kwargs):
+        self.fragment = False
+        self.query_params = {}
+        return super(OAuth2RedirectView, self).dispatch(request, *args, **kwargs)
 
     def get_redirect_url(self, **kwargs):
         # Deserialize the URL
@@ -56,7 +59,7 @@ class AuthorizeView(ProtectedViewMixin, OAuth2RedirectView):
         try:
             state = self._get_state(request)
             response_type = self._get_response_type(request)
-            scope = request.GET.get('scope', '')
+            scope = request.REQUEST.get('scope', '')
         except OAuth2Error, ex:
             self.query_params.update(self._get_error_query_params(ex))
         except Exception, ex:
@@ -72,7 +75,7 @@ class AuthorizeView(ProtectedViewMixin, OAuth2RedirectView):
 
     def _get_client(self, request):
         try:
-            client_id = request.GET['client_id']
+            client_id = request.REQUEST['client_id']
         except KeyError:
             raise InvalidRequestError('Missing client_id')
 
@@ -83,7 +86,7 @@ class AuthorizeView(ProtectedViewMixin, OAuth2RedirectView):
 
     def _get_redirect_uri(self, request, client):
         try:
-            redirect_uri = request.GET['redirect_uri']
+            redirect_uri = request.REQUEST['redirect_uri']
         except KeyError:
             return client.callback_url
 
@@ -93,7 +96,7 @@ class AuthorizeView(ProtectedViewMixin, OAuth2RedirectView):
         return redirect_uri
 
     def _get_state(self, request):
-        state = request.GET.get('state', '')
+        state = request.REQUEST.get('state', '')
 
         if state:
             self.query_params['state'] = state
@@ -101,10 +104,10 @@ class AuthorizeView(ProtectedViewMixin, OAuth2RedirectView):
         return state
 
     def _get_response_type(self, request):
-        response_type = request.GET.get('response_type', 'code')
+        response_type = request.REQUEST.get('response_type', 'code')
 
         if response_type not in ('code', 'token'):
-            raise UnsupportedResponseType()
+            raise UnsupportedResponseTypeError()
 
         self.fragment = (response_type == 'token')
 
