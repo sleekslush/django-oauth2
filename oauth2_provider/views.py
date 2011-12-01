@@ -117,12 +117,14 @@ class AuthorizeView(ProtectedViewMixin, OAuth2RedirectView):
         return authorization
 
     def _get_token(self, authorization, redirect_uri, state):
-        token, created = authorization.authorizationtoken_set.get_or_create(
-               redirect_uri=redirect_uri, state=state)
+        token, created = authorization.authorizationtoken_set.get_or_create()
 
         if not created:
            token.regenerate()
-           token.save()
+
+        token.redirect_uri = redirect_uri
+        token.state = state
+        token.save()
 
         response = {'code': token.token}
 
