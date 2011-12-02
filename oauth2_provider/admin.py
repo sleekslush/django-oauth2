@@ -4,6 +4,15 @@ from oauth2_provider.models import *
 class AuthorizationInline(admin.TabularInline):
     model = Authorization
 
+class AuthorizationTokenInline(admin.TabularInline):
+    model = AuthorizationToken
+
+class AccessTokenInline(admin.TabularInline):
+    model = AccessToken
+
+class RefreshTokenInline(admin.TabularInline):
+    model = RefreshToken
+
 class ClientApplicationAdmin(admin.ModelAdmin):
     inlines = [AuthorizationInline]
     exclude = ('client_id', 'client_secret')
@@ -14,6 +23,7 @@ class ClientApplicationAdmin(admin.ModelAdmin):
 
 class AuthorizationAdmin(admin.ModelAdmin):
     list_display = ('client', 'user', 'scope')
+    inlines = [AuthorizationTokenInline, AccessTokenInline, RefreshTokenInline]
 
 class TokenAdmin(admin.ModelAdmin):
     exclude = ('token',)
