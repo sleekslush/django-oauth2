@@ -7,11 +7,6 @@ from oauth2.provider import OAuth2Provider
 class AuthorizeView(ProtectedViewMixin, RedirectView):
     permanent = False
 
-    def dispatch(self, request, *args, **kwargs):
-        self.implicit_grant = False
-        self.query_params = {}
-        return super(RedirectView, self).dispatch(request, *args, **kwargs)
-
     def get(self, request, *args, **kwargs):
         try:
             oauth2_provider = OAuth2Provider(
