@@ -1,17 +1,11 @@
-from datetime import datetime
 from django.db import models
 
 class TokenManager(models.Manager):
-    def is_expired(self, token):
-        try:
-            auth_token = self.get(token=token)
-        except self.model.DoesNotExist:
-            return True
+    def regenerate(self, save=False, **kwargs):
+        token, created = self.get_or_create(**kwargs)
+        
+        if not created:
+            token.regenerate()
+            save and token.save()
 
-        return auth_token.expires_at < datetime.now()
-
-class AuthorizationTokenManager(TokenManager):
-    pass
-
-class AccessTokenManager(TokenManager):
-    pass
+        return token, created

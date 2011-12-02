@@ -1,7 +1,9 @@
+import math
 from datetime import datetime, timedelta
 from django.contrib.auth.models import User
 from django.db import models
-from oauth2_provider.managers import AccessTokenManager, AuthorizationTokenManager
+from oauth2_provider.exceptions import InvalidGrantError
+from oauth2_provider.managers import TokenManager
 from uuid import uuid4
 
 def generate_token():
@@ -17,6 +19,15 @@ class ClientApplication(models.Model):
 
     class Meta:
         ordering = ['name']
+
+    def set_user_authorization(self, user, scope=''):
+        authorization, created = self.authorization_set.get_or_create(user=user)
+
+        if not created:
+            authorization.scope = scope
+            authorization.save()
+
+        return authorization
 
     def save(self, *args, **kwargs):
         if not self.id:
@@ -37,12 +48,39 @@ class Authorization(models.Model):
         ordering = ['client', 'user']
         unique_together = ('client', 'user')
 
+    def get_code(self, redirect_uri, state):
+        auth_token, created = self.authorizationtoken_set.regenerate()
+        auth_token.redirect_uri = redirect_uri
+        auth_token.state = state
+        auth_token.save()
+
+        return auth_token
+
+    def get_access_token(self, token_type='example', auth_token=None):
+        if auth_token:
+            if auth_token.is_expired():
+                raise InvalidGrantError()
+
+            auth_token.delete()
+
+        access_token, created = self.accesstoken_set.regenerate()
+        access_token.token_type = token_type
+        access_token.save()
+
+        return access_token
+
+    def refresh_access_token(self, refresh_token, token_type='example'):
+        refresh_token.delete()
+        return self.get_access_token(token_type)
+
     def __unicode__(self):
         return '{} authorizes {}'.format(self.user, self.client)
 
 class Token(models.Model):
     authorization = models.ForeignKey(Authorization, unique=True)
     token = models.CharField(max_length=40, unique=True)
+
+    objects = TokenManager()
 
     class Meta:
         abstract = True
@@ -67,6 +105,14 @@ class ExpirableToken(Token):
         abstract = True
         ordering = ['authorization', '-expires_at']
 
+    def is_expired(self):
+        return self.get_expires_in == 0
+
+    def get_expires_in(self):
+        delta = self.expires_at - datetime.now()
+        seconds = int(math.ceil(delta.total_seconds()))
+        return seconds if seconds > 0 else 0
+
     def regenerate(self):
         if self.id or not self.expires_at:
             self.expires_at = datetime.now() + self.TTL
@@ -78,13 +124,13 @@ class AuthorizationToken(ExpirableToken):
     state = models.CharField(max_length=255, blank=True)
     redirect_uri = models.URLField(blank=True)
 
-    objects = AuthorizationTokenManager()
-
 class AccessToken(ExpirableToken):
     TTL = timedelta(hours=1)
     token_type = models.CharField(max_length=20, db_index=True)
 
-    objects = AccessTokenManager()
+    def get_refresh_token(self):
+        refresh_token, created = self.authorization.refreshtoken_set.get_or_create()
+        return refresh_token
 
 class RefreshToken(Token):
     pass

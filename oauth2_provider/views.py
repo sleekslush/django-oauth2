@@ -6,13 +6,51 @@ from oauth2_provider.exceptions import *
 from oauth2_provider.models import ClientApplication
 from urlparse import parse_qs, urlparse, urlunparse
 
-class OAuth2RedirectView(RedirectView):
+class AuthorizeView(ProtectedViewMixin, RedirectView):
     permanent = False
 
     def dispatch(self, request, *args, **kwargs):
-        self.fragment = False
+        self.implicit_grant = False
         self.query_params = {}
-        return super(OAuth2RedirectView, self).dispatch(request, *args, **kwargs)
+        return super(RedirectView, self).dispatch(request, *args, **kwargs)
+
+    def get(self, request, *args, **kwargs):
+        try:
+            client = self._get_client(request)
+            redirect_uri = self._get_redirect_uri(request, client)
+        except (InvalidClientError, InvalidRequestError), ex:
+            return HttpResponse(ex.message)
+
+        try:
+            self._determine_response_type(request)
+            state = self._get_state(request)
+            scope = request.REQUEST.get('scope', '')
+
+            # authorize the client access to this user
+            authorization = client.set_user_authorization(request.user, scope)
+
+            if self.implicit_grant:
+                access_token = authorization.get_access_token()
+                response = {
+                        'access_token': access_token.token,
+                        'token_type': access_token.token_type,
+                        'expires_in': access_token.get_expires_in(),
+                        'refresh_token': access_token.get_refresh_token()
+                        }
+            else:
+                response = {'code': authorization.get_code(redirect_uri, state)}
+        except OAuth2Error, ex:
+            self.query_params.update(self._get_error_query_params(ex))
+        except Exception, ex:
+            # TODO log the error
+            raise
+            self.query_params.update(self._get_error_query_params(ServerError()))
+        else:
+            self.query_params.update(response)
+
+        self.url = redirect_uri
+
+        return super(AuthorizeView, self).get(request, *args, **kwargs)
 
     def get_redirect_url(self, **kwargs):
         # Deserialize the URL
@@ -22,7 +60,7 @@ class OAuth2RedirectView(RedirectView):
         split_url = list(parse_result)
 
         # Update the redirect uri query params with new query params
-        if self.fragment:
+        if self.implicit_grant:
             split_url[5] = urllib.urlencode(self.query_params)
         else:
             query_params = parse_qs(parse_result.query)
@@ -33,45 +71,6 @@ class OAuth2RedirectView(RedirectView):
         url = urlunparse(split_url)
 
         return url % kwargs
-
-    def _get_error_query_params(self, ex):
-        query_params = {'error': ex.error}
-
-        if ex.error_description:
-            query_params['error_description'] = ex.error_description
-
-        if ex.error_uri:
-            query_params['error_uri'] = ex.error_uri
-
-        if ex.state:
-            query_params['state'] = ex.state
-
-        return query_params
-
-class AuthorizeView(ProtectedViewMixin, OAuth2RedirectView):
-    def get(self, request, *args, **kwargs):
-        try:
-            client = self._get_client(request)
-            redirect_uri = self._get_redirect_uri(request, client)
-        except (InvalidClientError, InvalidRequestError), ex:
-            return HttpResponse(ex.message)
-
-        try:
-            state = self._get_state(request)
-            response_type = self._get_response_type(request)
-            scope = request.REQUEST.get('scope', '')
-        except OAuth2Error, ex:
-            self.query_params.update(self._get_error_query_params(ex))
-        except Exception, ex:
-            # TODO log the error
-            self.query_params.update(self._get_error_query_params(ServerError()))
-        else:
-            self.query_params.update(self._generate_authorization_token(
-                    client, request.user, redirect_uri, scope, state))
-
-        self.url = redirect_uri
-
-        return super(AuthorizeView, self).get(request, *args, **kwargs)
 
     def _get_client(self, request):
         try:
@@ -103,38 +102,24 @@ class AuthorizeView(ProtectedViewMixin, OAuth2RedirectView):
 
         return state
 
-    def _get_response_type(self, request):
+    def _determine_response_type(self, request):
         response_type = request.REQUEST.get('response_type', 'code')
 
         if response_type not in ('code', 'token'):
             raise UnsupportedResponseTypeError()
 
-        self.fragment = (response_type == 'token')
+        self.implicit_grant = (response_type == 'token')
 
-        return response_type
+    def _get_error_query_params(self, ex):
+        query_params = {'error': ex.error}
 
-    def _generate_authorization_token(self, client, user, redirect_uri, scope, state):
-        authorization = self._get_authorization(client, user, scope)
-        return self._get_token(authorization, redirect_uri, state)
+        if ex.error_description:
+            query_params['error_description'] = ex.error_description
 
-    def _get_authorization(self, client, user, scope):
-        authorization, created = client.authorization_set.get_or_create(user=user, scope=scope)
+        if ex.error_uri:
+            query_params['error_uri'] = ex.error_uri
 
-        if not created:
-            # TODO check if scope is ok here
-            authorization.scope = scope
-            authorization.save()
+        if ex.state:
+            query_params['state'] = ex.state
 
-        return authorization
-
-    def _get_token(self, authorization, redirect_uri, state):
-        token, created = authorization.authorizationtoken_set.get_or_create()
-
-        if not created:
-           token.regenerate()
-
-        token.redirect_uri = redirect_uri
-        token.state = state
-        token.save()
-
-        return {'code': token.token}
+        return query_params
