@@ -1,5 +1,5 @@
 from django.contrib import admin
-from oauth2_provider.models import *
+from oauth2.models import *
 
 class AuthorizationInline(admin.TabularInline):
     model = Authorization
