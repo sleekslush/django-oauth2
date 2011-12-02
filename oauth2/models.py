@@ -2,8 +2,8 @@ import math
 from datetime import datetime, timedelta
 from django.contrib.auth.models import User
 from django.db import models
-from oauth2_provider.exceptions import InvalidGrantError
-from oauth2_provider.managers import TokenManager
+from oauth2.exceptions import InvalidGrantError
+from oauth2.managers import TokenManager
 from uuid import uuid4
 
 def generate_token():

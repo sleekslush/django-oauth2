@@ -2,6 +2,7 @@ from django.http import HttpResponse
 from django.views.generic import RedirectView
 from dzen.django.apps.common.views import ProtectedViewMixin
 from oauth2.exceptions import *
+from oauth2.provider import OAuth2Provider
 
 class AuthorizeView(ProtectedViewMixin, RedirectView):
     permanent = False
@@ -34,9 +35,9 @@ class AuthorizeView(ProtectedViewMixin, RedirectView):
         except Exception, ex:
             # TODO log the error
             raise
-            response = oauth2_provider.get_error_response(ServerError()))
+            response = oauth2_provider.get_error_response(ServerError())
 
-        self.url = oauth2_provider.get_redirect_uri(
+        self.url = oauth2_provider.get_redirect_url(
                 response,
                 oauth2_provider.implicit_grant(response_type)
                 )

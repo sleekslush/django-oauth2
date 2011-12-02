@@ -18,7 +18,7 @@ class OAuth2Provider(object):
             raise InvalidClientError('Client does not exist: {}'.format(client_id))
 
         if not redirect_uri:
-            self.redirect_uri = self.client.callback_uri
+            self.redirect_uri = self.client.callback_url
         elif not redirect_uri.startswitch(self.client.callback_url):
             raise InvalidRequestError('Invalid redirect_uri: {}'.format(redirect_uri))
         else:
@@ -26,22 +26,21 @@ class OAuth2Provider(object):
 
     def request_authorization(self, user, scope, response_type, state):
         authorization = self.client.set_user_authorization(user, scope)
-        self._query_params['state'] = state
+
+        if state:
+            self._query_params['state'] = state
 
         if response_type == 'code':
             return self._get_code_response(authorization, state)
         elif self.implicit_grant(response_type):
             return self.get_access_token_response(authorization)
         else:
-            raise UnsupportedResponseType()
+            raise UnsupportedResponseTypeError()
 
     def implicit_grant(self, response_type):
         return response_type == 'token'
 
     def get_error_response(self, ex):
-        if type(ex) is not OAuth2Error:
-            raise TypeError('Expected OAuth2Error')
-
         query_params = {'error': ex.error}
 
         if ex.error_description:
@@ -61,7 +60,7 @@ class OAuth2Provider(object):
 
         query_params.update(self._query_params)
 
-        return self.query_params
+        return query_params
 
     def get_access_token_response(self, authorization, include_refresh=True):
         access_token = authorization.get_access_token()
