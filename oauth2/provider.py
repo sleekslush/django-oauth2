@@ -49,18 +49,14 @@ class OAuth2Provider(object):
         if ex.error_uri:
             query_params['error_uri'] = ex.error_uri
 
-        query_params.update(self._query_params)
-
-        return query_params
+        return self._update_query_params(query_params)
 
     def _get_code_response(self, authorization, state):
         query_params = {
             'code': authorization.get_code(self.redirect_uri, state)
             }
 
-        query_params.update(self._query_params)
-
-        return query_params
+        return self._update_query_params(query_params)
 
     def get_access_token_response(self, authorization, include_refresh=True):
         access_token = authorization.get_access_token()
@@ -76,9 +72,7 @@ class OAuth2Provider(object):
         else:
             "do we need to delete the refresh token here?"
 
-        query_params.update(self._query_params)
-
-        return query_params
+        return self._update_query_params(query_params)
 
     def get_redirect_url(self, query_params, implicit_grant=False):
         # Deserialize the URL
@@ -96,3 +90,7 @@ class OAuth2Provider(object):
 
         # Serialize the URL
         return urlunparse(split_url)
+
+    def _update_query_params(self, query_params):
+        query_params.update(self._query_params)
+        return query_params
