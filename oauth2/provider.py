@@ -1,5 +1,5 @@
 from oauth2.exceptions import *
-from oauth2.models import ClientApplication
+from oauth2.models import AuthorizationToken, ClientApplication, RefreshToken
 from urllib import urlencode
 from urlparse import parse_qs, urlparse, urlunparse
 
@@ -41,13 +41,51 @@ class OAuth2Provider(object):
             raise UnsupportedResponseTypeError()
 
     def request_access_token(self, code, redirect_uri):
-        return {}
+        if not code:
+            raise InvalidRequestError()
+
+        try:
+            auth_token = AuthorizationToken.objects.get(token=code)
+        except AuthorizationToken.DoesNotExist:
+            raise InvalidGrantError()
+
+        if auth_token.is_expired():
+            raise InvalidGrantError()
+
+        authorization = self._validate_token_authorization(auth_token)
+
+        """Validate redirect uri"""
+
+        # Auth token is 1-time-use
+        auth_token.delete()
+
+        return self.get_access_token_response(authorization)
 
     def request_access_token_with_password(self, username, password, scope):
         return {}
 
-    def request_refresh_token(self, refresh_token, scope):
-        return {}
+    def request_refresh_token(self, refresh_token, scope=None):
+        if not refresh_token:
+            raise InvalidRequestError()
+
+        try:
+            refresh_token = RefreshToken.objects.get(token=refresh_token)
+        except RefreshToken.DoesNotExist:
+            raise InvalidRequestError()
+
+        authorization = self._validate_token_authorization(refresh_token)
+
+        """Validate scope"""
+
+        return self.get_access_token_response(authorization)
+
+    def _validate_token_authorization(self, token):
+        authorization = token.authorization
+
+        if self.client != authorization.client:
+            raise InvalidGrantError()
+
+        return authorization
 
     def get_access_token_response(self, authorization, include_refresh=True):
         access_token = authorization.get_access_token()

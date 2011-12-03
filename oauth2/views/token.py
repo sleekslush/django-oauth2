@@ -26,7 +26,11 @@ class AccessTokenView(TokenView):
                 )
 
 class RefreshTokenView(TokenView):
-    pass
+    def get_response(self, request):
+        return self.provider.request_refresh_token(
+                request.POST.get('refresh_token', None),
+                request.POST.get('scope', None)
+                )
 
 class PasswordView(TokenView):
     pass

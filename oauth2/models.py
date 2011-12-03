@@ -129,7 +129,7 @@ class AccessToken(ExpirableToken):
     token_type = models.CharField(max_length=20, db_index=True)
 
     def get_refresh_token(self):
-        refresh_token, created = self.authorization.refreshtoken_set.get_or_create()
+        refresh_token, created = self.authorization.refreshtoken_set.regenerate(True)
         return refresh_token
 
 class RefreshToken(Token):
