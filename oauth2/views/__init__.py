@@ -1,28 +1,29 @@
 from django.http import HttpResponse
+from django.views.generic import View
 from oauth2.exceptions import *
 
-class OAuth2DispatchMixin(object):
+class OAuth2DispatchView(View):
     dispatch_views = {}
 
     def dispatch_request(self, request, *args, **kwargs):
         try:
-            provider = self.get_provider(request)
+            self.provider = self.get_provider(request)
         except Exception, ex:
-            return self.handle_provider_error(ex)
+            return self.handle_provider_error(request, ex)
 
         try:
             view_class = self.dispatch_views[self.get_dispatch_key(request)]
-        except KeyError, ex:
+        except Exception, ex:
             return self.handle_dispatch_error(request, ex)
 
-        view = view_class.as_view(provider=provider)
+        view = view_class.as_view(provider=self.provider)
 
         return view(request, *args, **kwargs)
 
     def get_provider(self, request):
         raise NotImplementedError(self.get_provider)
 
-    def handle_provider_error(self, ex):
+    def handle_provider_error(self, request, ex):
         raise
 
     def get_dispatch_key(self, request):
@@ -51,7 +52,7 @@ class OAuth2ViewMixin(object):
     def get_error_response(self, ex):
         raise
 
-    def handle_provider_error(self, ex):
+    def handle_provider_error(self, request, ex):
         return HttpResponse(ex.message)
 
     def handle_error_response(self, ex):

@@ -4,11 +4,11 @@ from urllib import urlencode
 from urlparse import parse_qs, urlparse, urlunparse
 
 class OAuth2Provider(object):
-    def __init__(self, client_id, redirect_uri=None):
-        self._validate_client_request(client_id, redirect_uri)
+    def __init__(self, client_id, client_secret=None, redirect_uri=None):
+        self._validate_client_request(client_id, client_secret, redirect_uri)
         self._query_params = {}
 
-    def _validate_client_request(self, client_id, redirect_uri):
+    def _validate_client_request(self, client_id, client_secret, redirect_uri):
         if not client_id:
             raise InvalidRequestError('Missing client_id')
 
@@ -16,6 +16,9 @@ class OAuth2Provider(object):
             self.client = ClientApplication.objects.get(client_id=client_id)
         except ClientApplication.DoesNotExist:
             raise InvalidClientError('Client does not exist: {}'.format(client_id))
+
+        if client_secret and client_secret != self.client.client_secret:
+            raise InvalidClientError()
 
         if not redirect_uri:
             self.redirect_uri = self.client.callback_url

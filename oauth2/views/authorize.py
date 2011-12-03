@@ -1,8 +1,8 @@
-from django.views.generic import RedirectView, View
+from django.views.generic import RedirectView
 from dzen.django.apps.common.views import ProtectedViewMixin
 from oauth2.exceptions import *
 from oauth2.provider import OAuth2Provider
-from oauth2.views import OAuth2DispatchMixin, OAuth2ViewMixin
+from oauth2.views import OAuth2DispatchView, OAuth2ViewMixin
 
 class AuthorizeView(ProtectedViewMixin, OAuth2ViewMixin, RedirectView):
     permanent = False
@@ -27,7 +27,7 @@ class ImplicitAuthorizeView(AuthorizeView):
     response_type = 'token'
     implicit_grant = True
 
-class AuthorizeViewDispatcher(OAuth2DispatchMixin, View):
+class AuthorizeViewDispatcher(OAuth2DispatchView):
     dispatch_views = {
             AuthorizeView.response_type: AuthorizeView,
             ImplicitAuthorizeView.response_type: ImplicitAuthorizeView,
@@ -42,7 +42,7 @@ class AuthorizeViewDispatcher(OAuth2DispatchMixin, View):
     def get_provider(self, request):
         return OAuth2Provider(
                 request.REQUEST.get('client_id', None),
-                request.REQUEST.get('redirect_uri', None)
+                redirect_uri=request.REQUEST.get('redirect_uri', None)
                 )
 
     def get_dispatch_key(self, request):
