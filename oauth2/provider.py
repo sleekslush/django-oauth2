@@ -41,13 +41,13 @@ class OAuth2Provider(object):
             raise UnsupportedResponseTypeError()
 
     def request_access_token(self, code, redirect_uri):
-        pass
+        return {}
 
     def request_access_token_with_password(self, username, password, scope):
-        pass
+        return {}
 
     def request_refresh_token(self, refresh_token, scope):
-        pass
+        return {}
 
     def get_access_token_response(self, authorization, include_refresh=True):
         access_token = authorization.get_access_token()
