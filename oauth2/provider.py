@@ -32,12 +32,37 @@ class OAuth2Provider(object):
 
         if response_type == 'code':
             return self._get_code_response(authorization, state)
-        elif self.implicit_grant(response_type):
+        elif self.is_implicit_grant(response_type):
             return self.get_access_token_response(authorization)
         else:
             raise UnsupportedResponseTypeError()
 
-    def implicit_grant(self, response_type):
+    def request_access_token(self, code, redirect_uri):
+        pass
+
+    def request_access_token_with_password(self, username, password, scope):
+        pass
+
+    def request_refresh_token(self, refresh_token, scope):
+        pass
+
+    def get_access_token_response(self, authorization, include_refresh=True):
+        access_token = authorization.get_access_token()
+
+        query_params = {
+            'access_token': access_token.token,
+            'token_type': access_token.token_type,
+            'expires_in': access_token.get_expires_in()
+            }
+
+        if include_refresh:
+            query_params['refresh_token'] = access_token.get_refresh_token()
+        else:
+            "do we need to delete the refresh token here?"
+
+        return self._update_query_params(query_params)
+
+    def is_implicit_grant(self, response_type):
         return response_type == 'token'
 
     def get_error_response(self, ex):
@@ -55,22 +80,6 @@ class OAuth2Provider(object):
         query_params = {
             'code': authorization.get_code(self.redirect_uri, state)
             }
-
-        return self._update_query_params(query_params)
-
-    def get_access_token_response(self, authorization, include_refresh=True):
-        access_token = authorization.get_access_token()
-
-        query_params = {
-            'access_token': access_token.token,
-            'token_type': access_token.token_type,
-            'expires_in': access_token.get_expires_in()
-            }
-
-        if include_refresh:
-            query_params['refresh_token'] = access_token.get_refresh_token()
-        else:
-            "do we need to delete the refresh token here?"
 
         return self._update_query_params(query_params)
 

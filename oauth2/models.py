@@ -41,7 +41,7 @@ class ClientApplication(models.Model):
 
 class Authorization(models.Model):
     client = models.ForeignKey(ClientApplication)
-    user = models.ForeignKey(User)
+    user = models.ForeignKey(User, null=True)
     scope = models.CharField(max_length=255, blank=True)
 
     class Meta:
