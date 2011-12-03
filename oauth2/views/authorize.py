@@ -29,8 +29,8 @@ class ImplicitAuthorizeView(AuthorizeView):
 
 class AuthorizeViewDispatcher(OAuth2DispatchMixin, View):
     dispatch_views = {
-            'code': AuthorizeView,
-            'token': ImplicitAuthorizeView,
+            AuthorizeView.response_type: AuthorizeView,
+            ImplicitAuthorizeView.response_type: ImplicitAuthorizeView,
             }
 
     def get(self, request, *args, **kwargs):
