@@ -12,8 +12,18 @@ class TokenView(OAuth2ViewMixin, View):
     def post(self, request, *args, **kwargs):
         return self.handle_request(request, *args, **kwargs)
 
+    def handle_response(self, request, response, *args, **kwargs):
+        return HttpResponse(
+                urlencode(response),
+                content_type='application/x-www-form-urlencoded'
+                )
+
 class AccessTokenView(TokenView):
-    pass
+    def get_response(self, request):
+        return self.provider.request_access_token(
+                request.POST.get('code', None),
+                request.POST.get('redirect_uri', None)
+                )
 
 class RefreshTokenView(TokenView):
     pass
