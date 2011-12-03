@@ -15,7 +15,9 @@ class OAuth2DispatchMixin(object):
         except KeyError, ex:
             return self.handle_dispatch_error(request, ex)
 
-        return view_class.as_view(provider=provider)(request, *args, **kwargs)
+        view = view_class.as_view(provider=provider)
+
+        return view(request, *args, **kwargs)
 
     def get_provider(self, request):
         raise NotImplementedError(self.get_provider)
