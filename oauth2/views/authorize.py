@@ -4,36 +4,28 @@ from oauth2.exceptions import *
 from oauth2.provider import OAuth2Provider
 from oauth2.views import OAuth2DispatchMixin, OAuth2ViewMixin
 
-class BaseAuthorizeView(ProtectedViewMixin, OAuth2ViewMixin, RedirectView):
+class AuthorizeView(ProtectedViewMixin, OAuth2ViewMixin, RedirectView):
     permanent = False
+    response_type = 'code'
 
     def get(self, request, *args, **kwargs):
         self.handle_request(request, *args, **kwargs)
-        return super(BaseAuthorizeView, self).get(request, *args, **kwargs)
+        return super(AuthorizeView, self).get(request, *args, **kwargs)
 
-class AuthorizeView(BaseAuthorizeView):
     def get_response(self, request):
         return self.provider.request_authorization(
                 request.user,
                 request.REQUEST.get('scope', ''),
-                'code',
+                self.response_type,
                 request.REQUEST.get('state', '')
                 )
 
     def handle_response(self, request, response, *args, **kwargs):
-        self.url = self.provider.get_redirect_url(response)
+        self.url = self.provider.get_redirect_url(response, getattr(self, 'implicit_grant', False))
 
-class ImplicitAuthorizeView(BaseAuthorizeView):
-    def get_response(self, request):
-        return self.provider.request_authorization(
-                request.user,
-                request.REQUEST.get('scope', ''),
-                'token',
-                request.REQUEST.get('state', '')
-                )
-
-    def handle_response(self, request, response, *args, **kwargs):
-        self.url = self.provider.get_redirect_url(response, True)
+class ImplicitAuthorizeView(AuthorizeView):
+    response_type = 'token'
+    implicit_grant = True
 
 class AuthorizeViewDispatcher(OAuth2DispatchMixin, View):
     dispatch_views = {
