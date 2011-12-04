@@ -1,3 +1,4 @@
+from django.http import HttpResponseBadRequest
 from django.views.generic import RedirectView
 from dzen.django.apps.common.views import ProtectedViewMixin
 from oauth2.exceptions import *
@@ -44,6 +45,12 @@ class AuthorizeViewDispatcher(OAuth2DispatchView):
                 request.REQUEST.get('client_id', None),
                 redirect_uri=request.REQUEST.get('redirect_uri', None)
                 )
+
+    def handle_provider_error(self, request, ex):
+        if not isinstance(ex, OAuth2Error):
+            raise
+
+        return HttpResponseBadRequest(ex.message)
 
     def get_dispatch_key(self, request):
         return request.REQUEST.get('response_type', 'code')

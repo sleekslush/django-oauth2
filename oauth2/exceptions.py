@@ -1,4 +1,14 @@
 class OAuth2Error(Exception):
+    """
+    Authorization code grant errors
+    http://tools.ietf.org/html/draft-ietf-oauth-v2-22#section-4.1.2.1
+
+    Implicit grant errors
+    http://tools.ietf.org/html/draft-ietf-oauth-v2-22#section-4.2.2.1
+
+    Token errors
+    http://tools.ietf.org/html/draft-ietf-oauth-v2-22#section-5.2
+    """
     error = None
 
     def __init__(self, error_description=None, error_uri=None, state=None):

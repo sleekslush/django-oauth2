@@ -3,15 +3,19 @@ from datetime import datetime, timedelta
 from django.contrib.auth.models import User
 from django.db import models
 from oauth2.exceptions import InvalidGrantError
-from oauth2.managers import TokenManager
+from oauth2.managers import AuthorizationManager, TokenManager
 from uuid import uuid4
 
 def generate_token():
     return uuid4().hex
 
 class ClientApplication(models.Model):
+    """
+    Represents a client that has been granted the ability to access the OAuth2 provider.
+    """
     client_id = models.CharField(max_length=40, unique=True)
     client_secret = models.CharField(max_length=40, unique=True)
+    #created_at = models.DateTimeField(auto_now_add=True, db_index=True)
     name = models.CharField(max_length=255)
     website_url = models.URLField()
     callback_url = models.URLField()
@@ -21,15 +25,22 @@ class ClientApplication(models.Model):
         ordering = ['name']
 
     def set_user_authorization(self, user, scope=''):
-        authorization, created = self.authorization_set.get_or_create(user=user)
-
-        if not created:
-            authorization.scope = scope
-            authorization.save()
+        """
+        Grants the client access to the provided user under the specified scope and
+        returns the authorization model.
+        """
+        authorization, created = self.authorization_set.get_or_create(
+                user=user,
+                defaults={'scope': scope}
+                )
 
         return authorization
 
     def save(self, *args, **kwargs):
+        """
+        Automagically assigns newly generated tokens to client_id and client_secret
+        if this is the first time the object is getting saved.
+        """
         if not self.id:
             self.client_id = generate_token()
             self.client_secret = generate_token()
@@ -43,18 +54,21 @@ class Authorization(models.Model):
     client = models.ForeignKey(ClientApplication)
     user = models.ForeignKey(User, null=True)
     scope = models.CharField(max_length=255, blank=True)
+    #created_at = models.DateTimeField(auto_now=True, db_index=True)
+
+    objects = AuthorizationManager()
 
     class Meta:
         ordering = ['client', 'user']
         unique_together = ('client', 'user')
 
     def get_code(self, redirect_uri, state):
-        auth_token, created = self.authorizationtoken_set.regenerate()
-        auth_token.redirect_uri = redirect_uri
-        auth_token.state = state
-        auth_token.save()
+        defaults = {
+                'redirect_uri': redirect_uri,
+                'state': state
+                }
 
-        return auth_token
+        return self.authorizationtoken_set.regenerate(defaults=defaults)
 
     def get_access_token(self, token_type='example', auth_token=None):
         if auth_token:
@@ -63,11 +77,7 @@ class Authorization(models.Model):
 
             auth_token.delete()
 
-        access_token, created = self.accesstoken_set.regenerate()
-        access_token.token_type = token_type
-        access_token.save()
-
-        return access_token
+        return self.accesstoken_set.regenerate(defaults={'token_type': token_type})
 
     def refresh_access_token(self, refresh_token, token_type='example'):
         refresh_token.delete()
@@ -79,6 +89,7 @@ class Authorization(models.Model):
 class Token(models.Model):
     authorization = models.ForeignKey(Authorization, unique=True)
     token = models.CharField(max_length=40, unique=True)
+    #issued_at = models.DateTimeField(auto_now=True, db_index=True)
 
     objects = TokenManager()
 
@@ -129,8 +140,7 @@ class AccessToken(ExpirableToken):
     token_type = models.CharField(max_length=20, db_index=True)
 
     def get_refresh_token(self):
-        refresh_token, created = self.authorization.refreshtoken_set.regenerate(True)
-        return refresh_token
+        return self.authorization.refreshtoken_set.regenerate()
 
 class RefreshToken(Token):
     pass

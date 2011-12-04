@@ -5,10 +5,18 @@ from urlparse import parse_qs, urlparse, urlunparse
 
 class OAuth2Provider(object):
     def __init__(self, client_id, client_secret=None, redirect_uri=None):
+        """
+        Constructs an OAuth2 provider with an optional client_secret and redirect_uri.
+        """
         self._validate_client_request(client_id, client_secret, redirect_uri)
         self._query_params = {}
 
     def _validate_client_request(self, client_id, client_secret, redirect_uri):
+        """
+        Validates the client, the secret, and the redirect uri.
+
+        Raises various OAuth2Error exceptions if validation fails.
+        """
         if not client_id:
             raise InvalidRequestError('Missing client_id')
 
@@ -21,13 +29,21 @@ class OAuth2Provider(object):
             raise InvalidClientError()
 
         if not redirect_uri:
-            self.redirect_uri = self.client.callback_url
-        elif not redirect_uri.startswitch(self.client.callback_url):
+            self.redirect_uri = ''
+        elif not redirect_uri.startswith(self.client.callback_url):
             raise InvalidRequestError('Invalid redirect_uri: {}'.format(redirect_uri))
         else:
             self.redirect_uri = redirect_uri
 
     def request_authorization(self, user, scope, response_type, state):
+        """
+        Authorize the client to access the specified scope on behalf of the user.
+
+        The response_type determines whether to do a standard redirect, or issue an implicit
+        grant with an access token and refresh token.
+
+        State is persisted to avoid CSRF attempts.
+        """
         authorization = self.client.set_user_authorization(user, scope)
 
         if state:
@@ -41,6 +57,12 @@ class OAuth2Provider(object):
             raise UnsupportedResponseTypeError()
 
     def request_access_token(self, code, redirect_uri):
+        """
+        Exchanges an authorization code for an access token.
+
+        If redirect_uri is provided, we compare it to the value set during the
+        authorization request.
+        """
         if not code:
             raise InvalidRequestError()
 
@@ -54,9 +76,10 @@ class OAuth2Provider(object):
 
         authorization = self._validate_token_authorization(auth_token)
 
-        """Validate redirect uri"""
+        if auth_token.redirect_uri != redirect_uri:
+            raise InvalidGrantError()
 
-        # Auth token is 1-time-use
+        # Auth token is single use
         auth_token.delete()
 
         return self.get_access_token_response(authorization)
@@ -126,7 +149,7 @@ class OAuth2Provider(object):
 
     def get_redirect_url(self, query_params, implicit_grant=False):
         # Deserialize the URL
-        parse_result = urlparse(self.redirect_uri)
+        parse_result = urlparse(self.redirect_uri or self.client.callback_url)
 
         # Allow it to be mutable
         split_url = list(parse_result)
