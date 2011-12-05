@@ -1,4 +1,7 @@
 import base64
+from collections import namedtuple
+
+BasicAuthCreds = namedtuple('BasicAuthCreds', 'username password')
 
 class BasicAuthenticationMiddleware(object):
     def process_request(self, request):
@@ -23,4 +26,11 @@ class BasicAuthenticationMiddleware(object):
         if auth_type.lower() != 'basic':
             return
 
-        request.basic_auth = base64.b64decode(credentials).split(':', 1)
+        try:
+            credentials = base64.b64decode(credentials).split(':', 1)
+            request.basic_auth = BasicAuthCreds(*credentials)
+        except TypeError:
+            """
+            Either the value could not be base64-decoded or it doesn't contain a value
+            in the form of username:password, so don't set the basic_auth property on request.
+            """
