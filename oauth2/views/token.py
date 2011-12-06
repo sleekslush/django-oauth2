@@ -21,15 +21,15 @@ class TokenView(OAuth2ViewMixin, View):
 class AccessTokenView(TokenView):
     def get_response(self, request):
         return self.provider.request_access_token(
-                request.POST.get('code', None),
-                request.POST.get('redirect_uri', None)
+                request.POST.get('code'),
+                request.POST.get('redirect_uri')
                 )
 
 class RefreshTokenView(TokenView):
     def get_response(self, request):
         return self.provider.request_refresh_token(
-                request.POST.get('refresh_token', None),
-                request.POST.get('scope', None)
+                request.POST.get('refresh_token'),
+                request.POST.get('scope')
                 )
 
 class PasswordView(TokenView):
@@ -66,7 +66,7 @@ class TokenViewDispatcher(OAuth2DispatchView):
         return OAuth2Provider(
                 client_id,
                 client_secret,
-                request.POST.get('redirect_uri', None)
+                request.POST.get('redirect_uri')
                 )
 
     def get_client_credentials(self, request):

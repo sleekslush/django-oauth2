@@ -42,8 +42,8 @@ class AuthorizeViewDispatcher(OAuth2DispatchView):
 
     def get_provider(self, request):
         return OAuth2Provider(
-                request.REQUEST.get('client_id', None),
-                redirect_uri=request.REQUEST.get('redirect_uri', None)
+                request.REQUEST.get('client_id'),
+                redirect_uri=request.REQUEST.get('redirect_uri')
                 )
 
     def handle_provider_error(self, request, ex):
