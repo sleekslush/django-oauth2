@@ -69,15 +69,15 @@ class OAuth2Provider(object):
         try:
             auth_token = AuthorizationToken.objects.get(token=code)
         except AuthorizationToken.DoesNotExist:
-            raise InvalidGrantError()
+            raise InvalidGrantError('auth token does not exist')
 
         if auth_token.is_expired():
-            raise InvalidGrantError()
+            raise InvalidGrantError('auth token expired')
 
         authorization = self._validate_token_authorization(auth_token)
 
-        if auth_token.redirect_uri != redirect_uri:
-            raise InvalidGrantError()
+        if auth_token.redirect_uri and auth_token.redirect_uri != redirect_uri:
+            raise InvalidGrantError('redirect uri mismatch')
 
         # Auth token is single use
         auth_token.delete()
@@ -120,7 +120,7 @@ class OAuth2Provider(object):
             }
 
         if include_refresh:
-            query_params['refresh_token'] = access_token.get_refresh_token()
+            query_params['refresh_token'] = access_token.get_refresh_token().token
         else:
             "do we need to delete the refresh token here?"
 
