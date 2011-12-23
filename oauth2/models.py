@@ -1,6 +1,7 @@
 import math
 from datetime import datetime, timedelta
 from django.contrib.auth.models import User
+from django.core import serializers
 from django.db import models
 from oauth2.exceptions import InvalidGrantError
 from oauth2.managers import AuthorizationManager, TokenManager
@@ -14,15 +15,16 @@ class ClientApplication(models.Model):
     Represents a client that has been granted the ability to access the OAuth2 provider.
     """
     client_id = models.CharField(max_length=40, unique=True)
-    client_secret = models.CharField(max_length=40, unique=True)
-    #created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+    client_secret = models.CharField(max_length=40, unique=True, serialize=False)
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+    is_trusted = models.BooleanField(default=False)
     name = models.CharField(max_length=255)
     website_url = models.URLField()
     callback_url = models.URLField()
     description = models.TextField(blank=True)
 
     class Meta:
-        ordering = ['name']
+        ordering = ['-created_at', 'name']
 
     def set_user_authorization(self, user, scope=''):
         """
@@ -54,7 +56,7 @@ class Authorization(models.Model):
     client = models.ForeignKey(ClientApplication)
     user = models.ForeignKey(User, null=True)
     scope = models.CharField(max_length=255, blank=True)
-    #created_at = models.DateTimeField(auto_now=True, db_index=True)
+    created_at = models.DateTimeField(auto_now=True, db_index=True)
 
     objects = AuthorizationManager()
 

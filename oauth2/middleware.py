@@ -14,18 +14,23 @@ class BasicAuthenticationMiddleware(object):
         """
         try:
             authorization = request.META['HTTP_AUTHORIZATION']
-        except KeyError:
-            return
-
-        try:
             auth_type, credentials = authorization.split(None, 1)
-        except ValueError:
+        except (KeyError, ValueError):
             return
 
-        # Only allow Basic auth. Ignore digest
-        if auth_type.lower() != 'basic':
-            return
+        self.handle_auth(auth_type, credentials)
 
+    def handle_auth(self, auth_type, credentials):
+        """
+        Based on the auth type, get a handler and call it so it can handle its
+        authorization.
+        """
+        auth_type_handler = getattr(self, 'handle_{}_auth', None)
+
+        if callable(auth_type_handler):
+            auth_type_handler(auth_type, credentials)
+
+    def handle_basic_auth(self, auth_type, credentials):
         try:
             credentials = base64.b64decode(credentials).split(':', 1)
             request.basic_auth = BasicAuthCreds(*credentials)
@@ -34,3 +39,6 @@ class BasicAuthenticationMiddleware(object):
             Either the value could not be base64-decoded or it doesn't contain a value
             in the form of username:password, so don't set the basic_auth property on request.
             """
+    
+    def handle_bearer_auth(self, auth_type, credentials):
+        request.access_token = credentials
