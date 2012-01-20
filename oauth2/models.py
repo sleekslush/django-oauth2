@@ -118,10 +118,12 @@ class ExpirableToken(Token):
         abstract = True
         ordering = ['authorization', '-expires_at']
 
+    @property
     def is_expired(self):
-        return self.get_expires_in == 0
+        return self.expires_in == 0
 
-    def get_expires_in(self):
+    @property
+    def expires_in(self):
         delta = self.expires_at - datetime.now()
         seconds = int(math.ceil(delta.total_seconds()))
         return seconds if seconds > 0 else 0
@@ -141,7 +143,8 @@ class AccessToken(ExpirableToken):
     TTL = timedelta(hours=1)
     token_type = models.CharField(max_length=20, db_index=True)
 
-    def get_refresh_token(self):
+    @property
+    def refresh_token(self):
         return self.authorization.refreshtoken_set.regenerate()
 
 class RefreshToken(Token):

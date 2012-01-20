@@ -92,11 +92,11 @@ class OAuth2Provider(object):
             raise InvalidRequestError()
 
         try:
-            refresh_token = RefreshToken.objects.get(token=refresh_token)
+            new_refresh_token = RefreshToken.objects.get(token=refresh_token)
         except RefreshToken.DoesNotExist:
             raise InvalidRequestError()
 
-        authorization = self._validate_token_authorization(refresh_token)
+        authorization = self._validate_token_authorization(new_refresh_token)
 
         """Validate scope"""
 
@@ -120,7 +120,7 @@ class OAuth2Provider(object):
             }
 
         if include_refresh:
-            query_params['refresh_token'] = access_token.get_refresh_token().token
+            query_params['refresh_token'] = access_token.refresh_token.token
         else:
             "do we need to delete the refresh token here?"
 
