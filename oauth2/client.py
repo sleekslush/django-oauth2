@@ -23,6 +23,9 @@ class OAuth2Client(object):
         state A value that should be used to prevent CSRF
         implicit_grant True if the implicit grant type flow should be used (hash fragment access token response)
         path The endpoint on the server relative to self.base_url
+
+        http://tools.ietf.org/html/draft-ietf-oauth-v2-22#section-4.1.1
+        http://tools.ietf.org/html/draft-ietf-oauth-v2-22#section-4.2.1 (implicit grant)
         """
         query_params = self._strip_dict({
             'response_type': 'code' if not implicit_grant else 'token',
@@ -41,6 +44,8 @@ class OAuth2Client(object):
         code The authorization code
         redirect_uri Must match the redirect_uri used to construct the initial authorization URL request
         path The endpoint on the server relative to self.base_url
+
+        http://tools.ietf.org/html/draft-ietf-oauth-v2-22#section-4.1.3
         """
         post_data = {
             'grant_type': 'authorization_code',
@@ -59,6 +64,8 @@ class OAuth2Client(object):
         password The resource owner's password
         scope The scope of resources the application is requesting access to
         path The endpoint on the server relative to self.base_url
+
+        http://tools.ietf.org/html/draft-ietf-oauth-v2-22#section-4.3.2
         """
         post_data = {
             'grant_type': 'password',
@@ -76,6 +83,8 @@ class OAuth2Client(object):
 
         scope The scope of resources the application is requesting access to
         path The endpoint on the server relative to self.base_url
+
+        http://tools.ietf.org/html/draft-ietf-oauth-v2-22#section-4.4.2
         """
         post_data = {
             'grant_type': 'client_credentials',
@@ -92,9 +101,12 @@ class OAuth2Client(object):
 
         scope The scope of resources the application is requesting access to
         path The endpoint on the server relative to self.base_url
+
+        http://tools.ietf.org/html/draft-ietf-oauth-v2-22#section-6
         """
         post_data = {
             'grant_type': 'refresh_token',
+            'refresh_token': refresh_token,
             'scope': scope
             }
 
