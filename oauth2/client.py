@@ -110,7 +110,7 @@ class OAuth2Client(object):
             auth = (self.client_id, self.client_secret)
         else:
             auth = None
-            post_data.update({
+            data.update({
                 'client_id': self.client_id,
                 'client_secret': self.client_secret
                 })
