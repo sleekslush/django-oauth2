@@ -116,7 +116,7 @@ class OAuth2Provider(object):
         query_params = {
             'access_token': access_token.token,
             'token_type': access_token.token_type,
-            'expires_in': access_token.get_expires_in()
+            'expires_in': access_token.expires_in
             }
 
         if include_refresh:
