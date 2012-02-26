@@ -32,9 +32,7 @@ class ClientApplication(models.Model):
         returns the authorization model.
         """
         authorization, created = self.authorization_set.get_or_create(
-                user=user,
-                defaults={'scope': scope}
-                )
+                user=user, defaults={'scope': scope})
 
         return authorization
 
